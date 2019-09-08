@@ -87,7 +87,7 @@ def generate_and_save_images(model, epoch, test_input):
 
 
 def generate_gif():
-    with imageio.get_writer('dcgan.gif', mode='I') as writer:
+    with imageio.get_writer('images/dcgan.gif', mode='I') as writer:
         filenames = glob.glob('images/image*.png')
         filenames = sorted(filenames)
         last = -1
