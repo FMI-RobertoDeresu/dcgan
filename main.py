@@ -158,8 +158,8 @@ with tf.Session() as sess:
 
             _, gl = sess.run([train_gen, gen_loss], feed_dict={gen_input: noise})
             egl += gl / num_of_batches
-            
-            print("{} {}".format(gl, dl))
+
+            # print("{} {}".format(gl, dl))
 
         generate_and_save_images(generator, epoch + 1, test_noise)
 
