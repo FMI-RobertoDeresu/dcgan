@@ -84,7 +84,7 @@ def generate_and_save_images(model, epoch, test_input):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(str(path))
-    fig.close()
+    plt.close()
 
 
 def generate_gif():
