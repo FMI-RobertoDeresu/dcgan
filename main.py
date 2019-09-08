@@ -27,27 +27,25 @@ test_noise = np.random.normal(size=[16, NOISE_DIM])
 def make_generator_model():
     model = tf.keras.Sequential()
 
-    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,), kernel_initializer=KERNEL_INIT))
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    model.add(layers.Dense(7 * 7 * 512, use_bias=False, input_shape=(100,), kernel_initializer=KERNEL_INIT))
+    model.add(layers.ReLU())
+    assert model.output_shape == (None, 7 * 7 * 512)
 
-    model.add(layers.Reshape((7, 7, 256)))
-    assert model.output_shape == (None, 7, 7, 256)  # Note: None is the batch size
+    model.add(layers.Reshape((7, 7, 512)))
+    assert model.output_shape == (None, 7, 7, 512)
 
-    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False,
-                                     kernel_initializer=KERNEL_INIT))
-    assert model.output_shape == (None, 7, 7, 128)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    # model.add(layers.Conv2DTranspose(512, (5, 5), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=KERNEL_INIT))
+    # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
+    # model.add(layers.ReLU())
+    # assert model.output_shape == (None, 7, 7, 512)
 
-    model.add(layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False,
-                                     kernel_initializer=KERNEL_INIT))
-    assert model.output_shape == (None, 14, 14, 64)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    model.add(layers.Conv2DTranspose(256, (5, 5), strides=(2, 2), padding='same', use_bias=False, kernel_initializer=KERNEL_INIT))
+    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
+    model.add(layers.ReLU())
+    assert model.output_shape == (None, 14, 14, 256)
 
-    model.add(layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh',
-                                     kernel_initializer=KERNEL_INIT))
+    model.add(layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, kernel_initializer=KERNEL_INIT))
+    model.add(layers.Activation("tanh"))
     assert model.output_shape == (None, 28, 28, 1)
 
     return model
@@ -55,17 +53,31 @@ def make_generator_model():
 
 def make_discriminator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', input_shape=[28, 28, 1],
-                            kernel_initializer=KERNEL_INIT))
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+
+    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', input_shape=[28, 28, 1], kernel_initializer=KERNEL_INIT))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    assert model.output_shape == (None, 14, 14, 64)
 
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same', kernel_initializer=KERNEL_INIT))
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    assert model.output_shape == (None, 7, 7, 128)
+
+    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding='same', kernel_initializer=KERNEL_INIT))
+    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    assert model.output_shape == (None, 4, 4, 256)
+
+    model.add(layers.Conv2D(512, (5, 5), strides=(2, 2), padding='same', kernel_initializer=KERNEL_INIT))
+    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    assert model.output_shape == (None, 2, 2, 512)
 
     model.add(layers.Flatten())
+    assert model.output_shape == (None, 2 * 2 * 512)
+
     model.add(layers.Dense(1, activation="sigmoid", kernel_initializer=KERNEL_INIT))
+    assert model.output_shape == (None, 1)
 
     return model
 
@@ -146,6 +158,8 @@ with tf.Session() as sess:
 
             _, gl = sess.run([train_gen, gen_loss], feed_dict={gen_input: noise})
             egl += gl / num_of_batches
+            
+            print("{} {}".format(gl, dl))
 
         generate_and_save_images(generator, epoch + 1, test_noise)
 
