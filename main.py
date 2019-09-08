@@ -7,6 +7,7 @@ from tensorflow.keras import layers
 import time
 import sklearn
 from pathlib import Path
+import math
 
 (train_images, _), (_, _) = tf.keras.datasets.mnist.load_data()
 train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype('float32')
@@ -73,7 +74,7 @@ def make_discriminator_model():
 def generate_and_save_images(model, epoch, test_input):
     predictions = model.predict(test_input)
 
-    plt.figure(figsize=(4, 4))
+    fig = plt.figure(figsize=(4, 4))
     for i in range(predictions.shape[0]):
         plt.subplot(4, 4, i + 1)
         plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
@@ -83,7 +84,7 @@ def generate_and_save_images(model, epoch, test_input):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(str(path))
-    plt.show()
+    fig.close()
 
 
 def generate_gif():
@@ -151,5 +152,9 @@ with tf.Session() as sess:
 
         elapsed_time = time.time() - start_time
         print('Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}'.format(epoch + 1, elapsed_time, egl, edl))
+
+        if math.isnan(egl) or math.isnan(edl):
+            print("STOP on nan")
+            break
 
 generate_gif()
