@@ -80,7 +80,7 @@ def generate_and_save_images(model, epoch, test_input):
         plt.axis('off')
 
     path = Path('images/image_at_epoch_{:04d}.png'.format(epoch))
-    path.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(str(path))
     plt.show()
@@ -143,7 +143,6 @@ with tf.Session() as sess:
 
             feed_dict = {gen_input: noise, disc_input: images_batch}
             _, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss], feed_dict=feed_dict)
-            print("{} {}".format(gl, dl))
 
             egl += gl / num_of_batches
             edl += dl / num_of_batches
