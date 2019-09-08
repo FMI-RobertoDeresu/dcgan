@@ -27,7 +27,6 @@ test_noise = np.random.normal(size=[16, NOISE_DIM])
 def make_generator_model():
     model = tf.keras.Sequential()
 
-    # with tf.name_scope('fully_1'):
     model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,), kernel_initializer=KERNEL_INIT))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
@@ -74,7 +73,7 @@ def make_discriminator_model():
 def generate_and_save_images(model, epoch, test_input):
     predictions = model.predict(test_input)
 
-    fig = plt.figure(figsize=(4, 4))
+    plt.figure(figsize=(4, 4))
     for i in range(predictions.shape[0]):
         plt.subplot(4, 4, i + 1)
         plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
@@ -142,11 +141,11 @@ with tf.Session() as sess:
         for index, images_batch in enumerate(train_images_batches):
             noise = np.random.normal(size=[images_batch.shape[0], NOISE_DIM])
 
-            feed_dict = {gen_input: noise, disc_input: images_batch}
-            _, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss], feed_dict=feed_dict)
-
-            egl += gl / num_of_batches
+            _, dl = sess.run([train_disc, disc_loss], feed_dict={gen_input: noise, disc_input: images_batch})
             edl += dl / num_of_batches
+
+            _, gl = sess.run([train_gen, gen_loss], feed_dict={gen_input: noise})
+            egl += gl / num_of_batches
 
         generate_and_save_images(generator, epoch + 1, test_noise)
 
