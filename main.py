@@ -13,10 +13,12 @@ import math
 train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype('float32')
 train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
 
-EPOCHS = 50
+assert not np.any(np.isnan(train_images))
+
+EPOCHS = 100
 NOISE_DIM = 100
 BATCH_SIZE = 256
-LEARNING_RATE = 0.0002
+LEARNING_RATE = 0.0001
 KERNEL_INIT = "lecun_normal"
 # KERNEL_INIT = "he_normal"
 
