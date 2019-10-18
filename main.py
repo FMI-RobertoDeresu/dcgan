@@ -165,10 +165,10 @@ model_summaries(generator)
 
 # losses
 disk_fake_min = tf.reduce_min(discriminator_fake)
-disk_fake_max = tf.reduce_min(discriminator_fake)
+disk_fake_max = tf.reduce_max(discriminator_fake)
 
 disk_real_min = tf.reduce_min(discriminator_real)
-disk_real_max = tf.reduce_min(discriminator_real)
+disk_real_max = tf.reduce_max(discriminator_real)
 
 gen_loss = tf.log(discriminator_fake)
 gen_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(gen_loss), tf.ones_like(gen_loss), tf.zeros_like(gen_loss)))
@@ -209,9 +209,9 @@ with tf.Session(config=sess_config) as sess:
         epoch_disc_loss_nans_val = 0
 
         epoch_disk_fake_min_val = 0
-        epoch_disk_fake_max_val = 0
+        epoch_disk_fake_max_val = 1
         epoch_disk_real_min_val = 0
-        epoch_disk_real_max_val = 0
+        epoch_disk_real_max_val = 1
 
         for index, images_batch in enumerate(train_images_batches):
             noise = np.random.normal(size=[images_batch.shape[0], NOISE_DIM])
@@ -231,10 +231,10 @@ with tf.Session(config=sess_config) as sess:
                 [disk_fake_min, disk_fake_max, disk_real_min, disk_real_max],
                 feed_dict={gen_input: noise, disc_input: images_batch})
 
-            epoch_disk_fake_min_val = min(epoch_disk_fake_min_val, disk_fake_min_val)
-            epoch_disk_fake_max_val = max(epoch_disk_fake_max_val, disk_fake_max_val)
-            epoch_disk_real_min_val = min(epoch_disk_real_min_val, disk_real_min_val)
-            epoch_disk_real_max_val = max(epoch_disk_real_max_val, disk_real_max_val)
+            epoch_disk_fake_min_val = max(epoch_disk_fake_min_val, disk_fake_min_val)
+            epoch_disk_fake_max_val = min(epoch_disk_fake_max_val, disk_fake_max_val)
+            epoch_disk_real_min_val = max(epoch_disk_real_min_val, disk_real_min_val)
+            epoch_disk_real_max_val = min(epoch_disk_real_max_val, disk_real_max_val)
 
         elapsed_time = time.time() - start_time
         print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min: {:.2e}, max: {:.2e}), D(min: {:.2e}, max: {:.2e})"
