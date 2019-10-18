@@ -92,17 +92,24 @@ def make_discriminator_model():
     return model
 
 
-def variable_summaries(var):
+def model_summaries(model):
+    for var in model.weights:
+        variable_summaries(var, model.name)
+
+
+def variable_summaries(var, name_prefix=""):
+    name_prefix = "{}/{}".format(name_prefix, var.name)
+
     var_min = tf.reduce_min(var)
     var_max = tf.reduce_max(var)
     var_mean = tf.reduce_mean(var)
     var_stddev = tf.sqrt(tf.reduce_mean(tf.square(var - var_mean)))
 
-    tf.summary.scalar("summaries/min", var_min)
-    tf.summary.scalar("summaries/max", var_max)
-    tf.summary.scalar("summaries/mean", var_mean)
-    tf.summary.scalar("summaries/stddev", var_stddev)
-    tf.summary.histogram("summaries//histogram", var)
+    tf.summary.scalar(name_prefix + "/min", var_min)
+    tf.summary.scalar(name_prefix + "/max", var_max)
+    tf.summary.scalar(name_prefix + "/mean", var_mean)
+    tf.summary.scalar(name_prefix + "/stddev", var_stddev)
+    tf.summary.histogram(name_prefix, var)
 
 
 def generate_and_save_images(model, epoch, test_input):
@@ -151,7 +158,8 @@ discriminator_real = discriminator(disc_input)
 discriminator_fake = discriminator(generator_sample)
 
 # summary
-variable_summaries(discriminator.weights[0])
+model_summaries(discriminator)
+model_summaries(generator)
 
 # losses
 gen_loss = -tf.reduce_mean(tf.log(discriminator_fake))
