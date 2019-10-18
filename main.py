@@ -49,7 +49,7 @@ def make_generator_model():
 
     model.add(layers.Conv2DTranspose(256, (5, 5), strides=(2, 2), padding="same", use_bias=False,
                                      kernel_initializer=KERNEL_INIT))
-    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
+    # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
     model.add(layers.ReLU())
     assert model.output_shape == (None, 14, 14, 256)
 
@@ -65,30 +65,30 @@ def make_discriminator_model():
     model = tf.keras.Sequential(name="discriminator")
 
     model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding="same", input_shape=[28, 28, 1],
-                            kernel_initializer=KERNEL_INIT, name="conv_1"))
-    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_1"))
+                            kernel_initializer=KERNEL_INIT, name="conv_1", use_bias=False))
+    # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_1"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 14, 14, 64)
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_2"))
-    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_2"))
+    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_2", use_bias=False))
+    # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_2"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 7, 7, 128)
 
-    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_3"))
-    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_3"))
+    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_3", use_bias=False))
+    # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_3"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 4, 4, 256)
 
-    model.add(layers.Conv2D(512, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_4"))
-    model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_4"))
+    model.add(layers.Conv2D(512, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_4", use_bias=False))
+    # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_4"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 2, 2, 512)
 
     model.add(layers.Flatten())
     assert model.output_shape == (None, 2 * 2 * 512)
 
-    model.add(layers.Dense(1, activation="sigmoid", kernel_initializer=KERNEL_INIT, name="dense_1"))
+    model.add(layers.Dense(1, activation="sigmoid", kernel_initializer=KERNEL_INIT, name="dense_1", use_bias=False))
     assert model.output_shape == (None, 1)
 
     return model
