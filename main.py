@@ -216,6 +216,15 @@ with tf.Session() as sess:
             epoch_gen_loss_nans_val += gen_loss_nans_val
             epoch_disc_loss_nans_val += disc_loss_nans_val
 
+        elapsed_time = time.time() - start_time
+        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{})"
+              .format(epoch + 1,
+                      elapsed_time,
+                      epoch_gen_loss_val,
+                      epoch_disc_loss_val,
+                      epoch_gen_loss_nans_val,
+                      epoch_disc_loss_nans_val))
+        
         # write summaries
         summary = sess.run(summary_merge)
 
@@ -227,14 +236,7 @@ with tf.Session() as sess:
         # save samples
         generate_and_save_images(generator, epoch + 1, test_noise)
 
-        elapsed_time = time.time() - start_time
-        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{})"
-              .format(epoch + 1,
-                      elapsed_time,
-                      epoch_gen_loss_val,
-                      epoch_disc_loss_val,
-                      epoch_gen_loss_nans_val,
-                      epoch_disc_loss_nans_val))
+
 
         if math.isnan(epoch_gen_loss_val) or math.isnan(epoch_disc_loss_val):
             print("STOP on nan")
