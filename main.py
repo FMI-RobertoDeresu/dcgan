@@ -237,7 +237,7 @@ with tf.Session(config=sess_config) as sess:
             epoch_disk_real_max_val = max(epoch_disk_real_max_val, disk_real_max_val)
 
         elapsed_time = time.time() - start_time
-        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min{}, max{}), D(min{}, max{})"
+        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min: {:.2e}, max: {:.2e}), D(min: {:.2e}, max: {:.2e})"
               .format(epoch + 1,
                       elapsed_time,
                       epoch_gen_loss_val,
@@ -247,7 +247,7 @@ with tf.Session(config=sess_config) as sess:
                       epoch_disk_fake_min_val,
                       epoch_disk_fake_max_val,
                       epoch_disk_real_min_val,
-                      epoch_disk_real_max_val,))
+                      epoch_disk_real_max_val))
 
         # write summaries
         summary = sess.run(summary_merge)
