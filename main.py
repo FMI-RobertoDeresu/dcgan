@@ -9,7 +9,7 @@ import sklearn
 from pathlib import Path
 import math
 
-# tf.add_check_numerics_ops()
+tf.add_check_numerics_ops()
 
 train_uid = str(time.time()).replace(".", "").ljust(17, "0")
 
