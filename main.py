@@ -164,13 +164,15 @@ model_summaries(discriminator)
 model_summaries(generator)
 
 # losses
-gen_loss = -tf.reduce_mean(tf.log(discriminator_fake))
+gen_loss = tf.log(discriminator_fake)
 gen_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(gen_loss), tf.ones_like(gen_loss), tf.zeros_like(gen_loss)))
+gen_loss = -tf.reduce_mean(gen_loss)
 # gen_loss = -tf.reduce_mean(tf.where(tf.is_nan(gen_loss), tf.scalar_mul(1e-8, tf.ones_like(gen_loss)), gen_loss))
 # gen_loss = -tf.reduce_mean(tf.where(tf.is_nan(gen_loss), tf.zeros_like(gen_loss), gen_loss))
 
-disc_loss = -tf.reduce_mean(tf.log(discriminator_real) + tf.log(1. - discriminator_fake))
+disc_loss = tf.log(discriminator_real) + tf.log(1. - discriminator_fake)
 disc_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(disc_loss), tf.ones_like(disc_loss), tf.zeros_like(disc_loss)))
+disc_loss = -tf.reduce_mean(disc_loss)
 # disc_loss = -tf.reduce_mean(tf.where(tf.is_nan(disc_loss), tf.scalar_mul(1e-8, tf.ones_like(disc_loss)), disc_loss))
 # disc_loss = -tf.reduce_mean(tf.where(tf.is_nan(disc_loss), tf.zeros_like(disc_loss), disc_loss))
 
@@ -224,7 +226,7 @@ with tf.Session() as sess:
                       epoch_disc_loss_val,
                       epoch_gen_loss_nans_val,
                       epoch_disc_loss_nans_val))
-        
+
         # write summaries
         summary = sess.run(summary_merge)
 
