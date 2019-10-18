@@ -164,9 +164,13 @@ model_summaries(discriminator)
 model_summaries(generator)
 
 # losses
+disk_fake_nans = tf.reduce_sum(
+    tf.where(tf.is_nan(discriminator_fake), tf.ones_like(discriminator_fake), tf.zeros_like(discriminator_fake)))
 disk_fake_min = tf.reduce_min(discriminator_fake)
 disk_fake_max = tf.reduce_max(discriminator_fake)
 
+disk_real_nans = tf.reduce_sum(
+    tf.where(tf.is_nan(discriminator_real), tf.ones_like(discriminator_real), tf.zeros_like(discriminator_real)))
 disk_real_min = tf.reduce_min(discriminator_real)
 disk_real_max = tf.reduce_max(discriminator_real)
 
@@ -208,8 +212,10 @@ with tf.Session(config=sess_config) as sess:
         epoch_gen_loss_nans_val = 0
         epoch_disc_loss_nans_val = 0
 
+        epoch_disk_fake_nans_val = 0
         epoch_disk_fake_min_val = 0
         epoch_disk_fake_max_val = 1
+        epoch_disk_real_nans_val = 0
         epoch_disk_real_min_val = 0
         epoch_disk_real_max_val = 1
 
@@ -227,27 +233,31 @@ with tf.Session(config=sess_config) as sess:
             epoch_gen_loss_nans_val += gen_loss_nans_val
             epoch_disc_loss_nans_val += disc_loss_nans_val
 
-            disk_fake_min_val, disk_fake_max_val, disk_real_min_val, disk_real_max_val = sess.run(
-                [disk_fake_min, disk_fake_max, disk_real_min, disk_real_max],
+            disk_fake_nans_val, disk_fake_min_val, disk_fake_max_val, disk_real_nans_val, disk_real_min_val, disk_real_max_val = sess.run(
+                [disk_fake_nans, disk_fake_min, disk_fake_max, disk_real_nans, disk_real_min, disk_real_max],
                 feed_dict={gen_input: noise, disc_input: images_batch})
 
+            epoch_disk_fake_nans_val += disk_fake_nans_val
             epoch_disk_fake_min_val = max(epoch_disk_fake_min_val, disk_fake_min_val)
             epoch_disk_fake_max_val = min(epoch_disk_fake_max_val, disk_fake_max_val)
+
+            epoch_disk_real_nans_val += disk_real_nans_val
             epoch_disk_real_min_val = max(epoch_disk_real_min_val, disk_real_min_val)
             epoch_disk_real_max_val = min(epoch_disk_real_max_val, disk_real_max_val)
 
         elapsed_time = time.time() - start_time
-        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min: {:.2e}, max: {:.2e}), D(min: {:.2e}, max: {:.2e})"
-              .format(epoch + 1,
-                      elapsed_time,
-                      epoch_gen_loss_val,
-                      epoch_disc_loss_val,
-                      epoch_gen_loss_nans_val,
-                      epoch_disc_loss_nans_val,
-                      epoch_disk_fake_min_val,
-                      epoch_disk_fake_max_val,
-                      epoch_disk_real_min_val,
-                      epoch_disk_real_max_val))
+        print(
+            "Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min: {:.2e}, max: {:.2e}), D(min: {:.2e}, max: {:.2e})"
+            .format(epoch + 1,
+                    elapsed_time,
+                    epoch_gen_loss_val,
+                    epoch_disc_loss_val,
+                    epoch_gen_loss_nans_val,
+                    epoch_disc_loss_nans_val,
+                    epoch_disk_fake_min_val,
+                    epoch_disk_fake_max_val,
+                    epoch_disk_real_min_val,
+                    epoch_disk_real_max_val))
 
         # write summaries
         summary = sess.run(summary_merge)
