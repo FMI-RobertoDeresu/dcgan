@@ -247,15 +247,17 @@ with tf.Session(config=sess_config) as sess:
 
         elapsed_time = time.time() - start_time
         print(
-            "Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min: {:.2e}, max: {:.2e}), D(min: {:.2e}, max: {:.2e})"
+            "Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(nans: {}, min: {:.2e}, max: {:.2e}), D(nans: {}, min: {:.2e}, max: {:.2e})"
             .format(epoch + 1,
                     elapsed_time,
                     epoch_gen_loss_val,
                     epoch_disc_loss_val,
                     epoch_gen_loss_nans_val,
                     epoch_disc_loss_nans_val,
+                    epoch_disk_fake_nans_val,
                     epoch_disk_fake_min_val,
                     epoch_disk_fake_max_val,
+                    epoch_disk_real_nans_val,
                     epoch_disk_real_min_val,
                     epoch_disk_real_max_val))
 
