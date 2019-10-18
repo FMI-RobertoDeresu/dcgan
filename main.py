@@ -9,6 +9,8 @@ import sklearn
 from pathlib import Path
 import math
 
+# tf.add_check_numerics_ops()
+
 train_uid = str(time.time()).replace(".", "").ljust(17, "0")
 
 (train_images, _), (_, _) = tf.keras.datasets.mnist.load_data()
@@ -163,7 +165,14 @@ model_summaries(generator)
 
 # losses
 gen_loss = -tf.reduce_mean(tf.log(discriminator_fake))
+gen_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(gen_loss), tf.ones_like(gen_loss), tf.zeros_like(gen_loss)))
+# gen_loss = -tf.reduce_mean(tf.where(tf.is_nan(gen_loss), tf.scalar_mul(1e-8, tf.ones_like(gen_loss)), gen_loss))
+# gen_loss = -tf.reduce_mean(tf.where(tf.is_nan(gen_loss), tf.zeros_like(gen_loss), gen_loss))
+
 disc_loss = -tf.reduce_mean(tf.log(discriminator_real) + tf.log(1. - discriminator_fake))
+disc_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(disc_loss), tf.ones_like(disc_loss), tf.zeros_like(disc_loss)))
+# disc_loss = -tf.reduce_mean(tf.where(tf.is_nan(disc_loss), tf.scalar_mul(1e-8, tf.ones_like(disc_loss)), disc_loss))
+# disc_loss = -tf.reduce_mean(tf.where(tf.is_nan(disc_loss), tf.zeros_like(disc_loss), disc_loss))
 
 # optimizers
 generator_optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
@@ -187,16 +196,25 @@ with tf.Session() as sess:
     for epoch in range(EPOCHS):
         start_time = time.time()
         train_images_batches = np.array_split(sklearn.utils.shuffle(train_images), num_of_batches)
-        epoch_gen_loss = 0
-        epoch_disc_loss = 0
+
+        epoch_gen_loss_val = 0
+        epoch_disc_loss_val = 0
+
+        epoch_gen_loss_nans_val = 0
+        epoch_disc_loss_nans_val = 0
+
         for index, images_batch in enumerate(train_images_batches):
             noise = np.random.normal(size=[images_batch.shape[0], NOISE_DIM])
 
-            _, dl = sess.run([train_disc, disc_loss], feed_dict={gen_input: noise, disc_input: images_batch})
-            epoch_disc_loss += dl / num_of_batches
+            _, disc_loss_val = sess.run([train_disc, disc_loss], feed_dict={gen_input: noise, disc_input: images_batch})
+            epoch_disc_loss_val += disc_loss_val / num_of_batches
 
-            _, gl = sess.run([train_gen, gen_loss], feed_dict={gen_input: noise})
-            epoch_gen_loss += gl / num_of_batches
+            _, gen_loss_val = sess.run([train_gen, gen_loss], feed_dict={gen_input: noise})
+            epoch_gen_loss_val += gen_loss_val / num_of_batches
+
+            gen_loss_nans_val, disc_loss_nans_val = sess.run([gen_loss_nans, disc_loss_nans], feed_dict={gen_input: noise, disc_input: images_batch})
+            epoch_gen_loss_nans_val += gen_loss_nans_val
+            epoch_disc_loss_nans_val += disc_loss_nans_val
 
         # write summaries
         summary = sess.run(summary_merge)
@@ -210,12 +228,15 @@ with tf.Session() as sess:
         generate_and_save_images(generator, epoch + 1, test_noise)
 
         elapsed_time = time.time() - start_time
-        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}".format(epoch + 1,
-                                                                       elapsed_time,
-                                                                       epoch_gen_loss,
-                                                                       epoch_disc_loss))
+        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{})"
+              .format(epoch + 1,
+                      elapsed_time,
+                      epoch_gen_loss_val,
+                      epoch_disc_loss_val,
+                      epoch_gen_loss_nans_val,
+                      epoch_disc_loss_nans_val))
 
-        if math.isnan(epoch_gen_loss) or math.isnan(epoch_disc_loss):
+        if math.isnan(epoch_gen_loss_val) or math.isnan(epoch_disc_loss_val):
             print("STOP on nan")
             break
 
