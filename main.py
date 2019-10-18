@@ -111,7 +111,7 @@ def variable_summaries(var, name_prefix=""):
     tf.summary.scalar(name_prefix + "/max", var_max)
     tf.summary.scalar(name_prefix + "/mean", var_mean)
     tf.summary.scalar(name_prefix + "/stddev", var_stddev)
-    tf.summary.histogram(name_prefix, var)
+    tf.summary.histogram(name_prefix, tf.where(tf.is_nan(var), tf.scalar_mul(1e-8, tf.ones_like(var)), var))
 
 
 def generate_and_save_images(model, epoch, test_input):
@@ -164,6 +164,12 @@ model_summaries(discriminator)
 model_summaries(generator)
 
 # losses
+disk_fake_min = tf.reduce_min(discriminator_fake)
+disk_fake_max = tf.reduce_min(discriminator_fake)
+
+disk_real_min = tf.reduce_min(discriminator_real)
+disk_real_max = tf.reduce_min(discriminator_real)
+
 gen_loss = tf.log(discriminator_fake)
 gen_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(gen_loss), tf.ones_like(gen_loss), tf.zeros_like(gen_loss)))
 gen_loss = -tf.reduce_mean(tf.where(tf.is_nan(gen_loss), tf.scalar_mul(1e-8, tf.ones_like(gen_loss)), gen_loss))
@@ -181,7 +187,8 @@ train_gen = generator_optimizer.minimize(gen_loss, var_list=generator.trainable_
 train_disc = discriminator_optimizer.minimize(disc_loss, var_list=discriminator.trainable_variables)
 
 # start training
-with tf.Session() as sess:
+sess_config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
+with tf.Session(config=sess_config) as sess:
     # merge summaries
     summary_merge = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter("./logs/tensorboard/{}".format(train_uid), sess.graph)
@@ -201,6 +208,11 @@ with tf.Session() as sess:
         epoch_gen_loss_nans_val = 0
         epoch_disc_loss_nans_val = 0
 
+        epoch_disk_fake_min_val = 0
+        epoch_disk_fake_max_val = 0
+        epoch_disk_real_min_val = 0
+        epoch_disk_real_max_val = 0
+
         for index, images_batch in enumerate(train_images_batches):
             noise = np.random.normal(size=[images_batch.shape[0], NOISE_DIM])
 
@@ -210,18 +222,32 @@ with tf.Session() as sess:
             _, gen_loss_val = sess.run([train_gen, gen_loss], feed_dict={gen_input: noise})
             epoch_gen_loss_val += gen_loss_val / num_of_batches
 
-            gen_loss_nans_val, disc_loss_nans_val = sess.run([gen_loss_nans, disc_loss_nans], feed_dict={gen_input: noise, disc_input: images_batch})
+            gen_loss_nans_val, disc_loss_nans_val = sess.run([gen_loss_nans, disc_loss_nans],
+                                                             feed_dict={gen_input: noise, disc_input: images_batch})
             epoch_gen_loss_nans_val += gen_loss_nans_val
             epoch_disc_loss_nans_val += disc_loss_nans_val
 
+            disk_fake_min_val, disk_fake_max_val, disk_real_min_val, disk_real_max_val = sess.run(
+                [disk_fake_min, disk_fake_max, disk_real_min, disk_real_max],
+                feed_dict={gen_input: noise, disc_input: images_batch})
+
+            epoch_disk_fake_min_val = min(epoch_disk_fake_min_val, disk_fake_min_val)
+            epoch_disk_fake_max_val = max(epoch_disk_fake_max_val, disk_fake_max_val)
+            epoch_disk_real_min_val = min(epoch_disk_real_min_val, disk_real_min_val)
+            epoch_disk_real_max_val = max(epoch_disk_real_max_val, disk_real_max_val)
+
         elapsed_time = time.time() - start_time
-        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{})"
+        print("Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(min{}, max{}), D(min{}, max{})"
               .format(epoch + 1,
                       elapsed_time,
                       epoch_gen_loss_val,
                       epoch_disc_loss_val,
                       epoch_gen_loss_nans_val,
-                      epoch_disc_loss_nans_val))
+                      epoch_disc_loss_nans_val,
+                      epoch_disk_fake_min_val,
+                      epoch_disk_fake_max_val,
+                      epoch_disk_real_min_val,
+                      epoch_disk_real_max_val,))
 
         # write summaries
         summary = sess.run(summary_merge)
@@ -233,8 +259,6 @@ with tf.Session() as sess:
 
         # save samples
         generate_and_save_images(generator, epoch + 1, test_noise)
-
-
 
         if math.isnan(epoch_gen_loss_val) or math.isnan(epoch_disc_loss_val):
             print("STOP on nan")
