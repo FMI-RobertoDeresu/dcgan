@@ -14,7 +14,7 @@ tf.add_check_numerics_ops()
 train_uid = str(time.time()).replace(".", "").ljust(17, "0")
 
 (train_images, _), (_, _) = tf.keras.datasets.mnist.load_data()
-train_images = train_images[:1000]
+train_images = train_images#[:1000]
 train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype("float32")
 train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
 
@@ -34,27 +34,28 @@ test_noise = np.random.normal(size=[16, NOISE_DIM])
 def make_generator_model():
     model = tf.keras.Sequential(name="generator")
 
-    model.add(layers.Dense(7 * 7 * 512, use_bias=False, input_shape=(100,), kernel_initializer=KERNEL_INIT))
+    model.add(layers.Dense(name="dense_1", units=7 * 7 * 512, input_shape=(100,),
+                           use_bias=False, kernel_initializer=KERNEL_INIT))
     model.add(layers.ReLU())
     assert model.output_shape == (None, 7 * 7 * 512)
 
-    model.add(layers.Reshape((7, 7, 512)))
+    model.add(layers.Reshape(name="reshape", target_shape=(7, 7, 512)))
     assert model.output_shape == (None, 7, 7, 512)
 
-    # model.add(layers.Conv2DTranspose(512, (5, 5), strides=(1, 1), padding="same", use_bias=False,
-    # kernel_initializer=KERNEL_INIT))
+    model.add(layers.Conv2DTranspose(name="deconv_1", filters=512, kernel_size=(5, 5), strides=(1, 1), padding="same",
+                                     use_bias=False, kernel_initializer=KERNEL_INIT))
     # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
-    # model.add(layers.ReLU())
-    # assert model.output_shape == (None, 7, 7, 512)
+    model.add(layers.ReLU())
+    assert model.output_shape == (None, 7, 7, 512)
 
-    model.add(layers.Conv2DTranspose(256, (5, 5), strides=(2, 2), padding="same", use_bias=False,
-                                     kernel_initializer=KERNEL_INIT))
+    model.add(layers.Conv2DTranspose(name="deconv_2", filters=256, kernel_size=(5, 5), strides=(2, 2), padding="same",
+                                     use_bias=False, kernel_initializer=KERNEL_INIT))
     # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
     model.add(layers.ReLU())
     assert model.output_shape == (None, 14, 14, 256)
 
-    model.add(layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding="same", use_bias=False,
-                                     kernel_initializer=KERNEL_INIT))
+    model.add(layers.Conv2DTranspose(name="deconv_3", filters=1, kernel_size=(5, 5), strides=(2, 2), padding="same",
+                                     use_bias=False, kernel_initializer=KERNEL_INIT))
     model.add(layers.Activation("tanh"))
     assert model.output_shape == (None, 28, 28, 1)
 
@@ -64,31 +65,35 @@ def make_generator_model():
 def make_discriminator_model():
     model = tf.keras.Sequential(name="discriminator")
 
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding="same", input_shape=[28, 28, 1],
-                            kernel_initializer=KERNEL_INIT, name="conv_1", use_bias=False))
+    model.add(layers.Conv2D(name="conv_1", filters=64, kernel_size=(5, 5), strides=(2, 2), padding="same",
+                            use_bias=False, kernel_initializer=KERNEL_INIT, input_shape=[28, 28, 1]))
     # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_1"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 14, 14, 64)
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_2", use_bias=False))
+    model.add(layers.Conv2D(name="conv_2", filters=128, kernel_size=(5, 5), strides=(2, 2), padding="same",
+                            use_bias=False, kernel_initializer=KERNEL_INIT))
     # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_2"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 7, 7, 128)
 
-    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_3", use_bias=False))
+    model.add(layers.Conv2D(name="conv_3", filters=256, kernel_size=(5, 5), strides=(2, 2), padding="same",
+                            use_bias=False, kernel_initializer=KERNEL_INIT))
     # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_3"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 4, 4, 256)
 
-    model.add(layers.Conv2D(512, (5, 5), strides=(2, 2), padding="same", kernel_initializer=KERNEL_INIT, name="conv_4", use_bias=False))
+    model.add(layers.Conv2D(name="conv_4", filters=512, kernel_size=(5, 5), strides=(2, 2), padding="same",
+                            use_bias=False, kernel_initializer=KERNEL_INIT))
     # model.add(layers.BatchNormalization(momentum=0.9, epsilon=1e-5, name="batch_norm_4"))
     model.add(layers.LeakyReLU(alpha=0.2))
     assert model.output_shape == (None, 2, 2, 512)
 
-    model.add(layers.Flatten())
+    model.add(layers.Flatten(name="flatten"))
     assert model.output_shape == (None, 2 * 2 * 512)
 
-    model.add(layers.Dense(1, activation="sigmoid", kernel_initializer=KERNEL_INIT, name="dense_1", use_bias=False))
+    model.add(layers.Dense(name="dense_1", units=1, activation="sigmoid",
+                           use_bias=False, kernel_initializer=KERNEL_INIT))
     assert model.output_shape == (None, 1)
 
     return model
@@ -164,15 +169,15 @@ model_summaries(discriminator)
 model_summaries(generator)
 
 # losses
-disk_fake_nans = tf.reduce_sum(
-    tf.where(tf.is_nan(discriminator_fake), tf.ones_like(discriminator_fake), tf.zeros_like(discriminator_fake)))
-disk_fake_min = tf.reduce_min(discriminator_fake)
-disk_fake_max = tf.reduce_max(discriminator_fake)
-
 disk_real_nans = tf.reduce_sum(
     tf.where(tf.is_nan(discriminator_real), tf.ones_like(discriminator_real), tf.zeros_like(discriminator_real)))
 disk_real_min = tf.reduce_min(discriminator_real)
 disk_real_max = tf.reduce_max(discriminator_real)
+
+disk_fake_nans = tf.reduce_sum(
+    tf.where(tf.is_nan(discriminator_fake), tf.ones_like(discriminator_fake), tf.zeros_like(discriminator_fake)))
+disk_fake_min = tf.reduce_min(discriminator_fake)
+disk_fake_max = tf.reduce_max(discriminator_fake)
 
 gen_loss = tf.log(discriminator_fake)
 gen_loss_nans = tf.reduce_sum(tf.where(tf.is_nan(gen_loss), tf.ones_like(gen_loss), tf.zeros_like(gen_loss)))
@@ -212,12 +217,13 @@ with tf.Session(config=sess_config) as sess:
         epoch_gen_loss_nans_val = 0
         epoch_disc_loss_nans_val = 0
 
-        epoch_disk_fake_nans_val = 0
-        epoch_disk_fake_min_val = 0
-        epoch_disk_fake_max_val = 1
         epoch_disk_real_nans_val = 0
         epoch_disk_real_min_val = 0
         epoch_disk_real_max_val = 1
+
+        epoch_disk_fake_nans_val = 0
+        epoch_disk_fake_min_val = 0
+        epoch_disk_fake_max_val = 1
 
         for index, images_batch in enumerate(train_images_batches):
             noise = np.random.normal(size=[images_batch.shape[0], NOISE_DIM])
@@ -237,29 +243,29 @@ with tf.Session(config=sess_config) as sess:
                 [disk_fake_nans, disk_fake_min, disk_fake_max, disk_real_nans, disk_real_min, disk_real_max],
                 feed_dict={gen_input: noise, disc_input: images_batch})
 
-            epoch_disk_fake_nans_val += disk_fake_nans_val
-            epoch_disk_fake_min_val = max(epoch_disk_fake_min_val, disk_fake_min_val)
-            epoch_disk_fake_max_val = min(epoch_disk_fake_max_val, disk_fake_max_val)
-
             epoch_disk_real_nans_val += disk_real_nans_val
             epoch_disk_real_min_val = max(epoch_disk_real_min_val, disk_real_min_val)
             epoch_disk_real_max_val = min(epoch_disk_real_max_val, disk_real_max_val)
 
+            epoch_disk_fake_nans_val += disk_fake_nans_val
+            epoch_disk_fake_min_val = max(epoch_disk_fake_min_val, disk_fake_min_val)
+            epoch_disk_fake_max_val = min(epoch_disk_fake_max_val, disk_fake_max_val)
+
         elapsed_time = time.time() - start_time
         print(
-            "Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), G(nans: {}, min: {:.2e}, max: {:.2e}), D(nans: {}, min: {:.2e}, max: {:.2e})"
-            .format(epoch + 1,
-                    elapsed_time,
-                    epoch_gen_loss_val,
-                    epoch_disc_loss_val,
-                    epoch_gen_loss_nans_val,
-                    epoch_disc_loss_nans_val,
-                    epoch_disk_fake_nans_val,
-                    epoch_disk_fake_min_val,
-                    epoch_disk_fake_max_val,
-                    epoch_disk_real_nans_val,
-                    epoch_disk_real_min_val,
-                    epoch_disk_real_max_val))
+            "Epoch {}: Time: {}, Gen Loss: {}, Disc Loss: {}, Nans (g: {}, d:{}), real (nans: {}, min: {:.2e}, max: {:.2e}), fake (nans: {}, min: {:.2e}, max: {:.2e})"
+                .format(epoch + 1,
+                        elapsed_time,
+                        epoch_gen_loss_val,
+                        epoch_disc_loss_val,
+                        epoch_gen_loss_nans_val,
+                        epoch_disc_loss_nans_val,
+                        epoch_disk_real_nans_val,
+                        epoch_disk_real_min_val,
+                        epoch_disk_real_max_val,
+                        epoch_disk_fake_nans_val,
+                        epoch_disk_fake_min_val,
+                        epoch_disk_fake_max_val))
 
         # write summaries
         summary = sess.run(summary_merge)
