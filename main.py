@@ -14,7 +14,7 @@ tf.add_check_numerics_ops()
 train_uid = str(time.time()).replace(".", "").ljust(17, "0")
 
 (train_images, _), (_, _) = tf.keras.datasets.mnist.load_data()
-train_images = train_images#[:1000]
+train_images = train_images#[:512]
 train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype("float32")
 train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
 
@@ -23,6 +23,7 @@ assert not np.any(np.isnan(train_images))
 EPOCHS = 100
 NOISE_DIM = 100
 BATCH_SIZE = 256
+# BATCH_SIZE = 64
 LEARNING_RATE = 0.0001
 KERNEL_INIT = "lecun_normal"
 # KERNEL_INIT = "he_normal"
@@ -164,10 +165,6 @@ discriminator = make_discriminator_model()
 discriminator_real = discriminator(disc_input)
 discriminator_fake = discriminator(generator_sample)
 
-# summary
-model_summaries(discriminator)
-model_summaries(generator)
-
 # losses
 disk_real_nans = tf.reduce_sum(
     tf.where(tf.is_nan(discriminator_real), tf.ones_like(discriminator_real), tf.zeros_like(discriminator_real)))
@@ -194,6 +191,19 @@ discriminator_optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
 # train ops
 train_gen = generator_optimizer.minimize(gen_loss, var_list=generator.trainable_variables)
 train_disc = discriminator_optimizer.minimize(disc_loss, var_list=discriminator.trainable_variables)
+
+# summary
+model_summaries(discriminator)
+model_summaries(generator)
+
+gen_output = tf.placeholder(dtype=tf.float32, name="generator/output")
+variable_summaries(gen_output)
+
+disc_output = tf.placeholder(dtype=tf.float32, name="discriminator/output")
+variable_summaries(disc_output)
+
+tf.summary.scalar("loss/generator", gen_loss)
+tf.summary.scalar("loss/discriminator", disc_loss)
 
 # start training
 sess_config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
@@ -268,11 +278,14 @@ with tf.Session(config=sess_config) as sess:
                         epoch_disk_fake_max_val))
 
         # write summaries
-        summary = sess.run(summary_merge)
+        summary_images = train_images_batches[0]
+        summary_noise = np.random.normal(size=[summary_images.shape[0], NOISE_DIM])
 
-        # summary.value.add(tag="disc_loss", simple_value=epoch_disc_loss)
-        # summary.value.add(tag="gen_loss", simple_value=epoch_gen_loss)
+        gen_output_val, disc_output_val = sess.run([generator_sample, discriminator_fake],
+                                                   feed_dict={gen_input: summary_noise})
 
+        summary = sess.run(summary_merge, feed_dict={gen_input: summary_noise, disc_input: summary_images,
+                                                     gen_output: gen_output_val, disc_output: disc_output_val})
         summary_writer.add_summary(summary, epoch)
 
         # save samples
